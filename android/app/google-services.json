@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "486478193659",
+    "project_id": "quicktutor2",
+    "storage_bucket": "quicktutor2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:486478193659:android:21aec277d4a77e2f07e15e",
+        "android_client_info": {
+          "package_name": "com.example.quicktutor_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBF6Fr58DQ-bFfHwLcQb_iAyIi-JpYUKbA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:486478193659:android:6a0d8e096cda2aef07e15e",
+        "android_client_info": {
+          "package_name": "com.example.quicktutor_2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBF6Fr58DQ-bFfHwLcQb_iAyIi-JpYUKbA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

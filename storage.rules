@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+    // Student/admin avatars
+    match /avatars/{uid}.jpg {
+      allow write: if signedIn() && request.auth.uid == uid;
+      allow read: if true;
+    }
+    // Tutor verification files
+    match /verifications/{uid}/{allPaths=**} {
+      allow write: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+    }
+    // Tutor avatars
+    match /tutor_avatars/{file} {
+      allow write: if signedIn();
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,177 @@
+╔══════════════════════════════════════════════════════════════╗
+║          QuickTutor - iOS Simulator Quick Reference         ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ ENVIRONMENT STATUS: STABLE & READY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 LAUNCH OPTIONS
+─────────────────────────────────────────────────────────────
+
+Option 1: Interactive Script (Easiest)
+  ./launch_simulator.sh
+
+Option 2: Direct Commands
+  # Student App
+  flutter run -d ED5A98AB-816C-4215-9BD0-49CAB193DB6A -t lib/main_student.dart
+  
+  # Tutor App
+  flutter run -d 0E1258B5-2DB9-4671-B9BF-C0362494F98E -t lib/main_tutor.dart
+  
+  # Admin App
+  flutter run -d ED5A98AB-816C-4215-9BD0-49CAB193DB6A -t lib/main_admin.dart
+  
+  # Main App (Role-based)
+  flutter run -d ED5A98AB-816C-4215-9BD0-49CAB193DB6A -t lib/main.dart
+
+Option 3: Let Flutter Choose Simulator
+  flutter run -t lib/main_student.dart
+
+
+🔧 QUICK FIXES
+─────────────────────────────────────────────────────────────
+
+If Build Fails:
+  flutter clean && flutter pub get
+  cd ios && pod install && cd ..
+
+If Pods Break:
+  cd ios
+  pod deintegrate
+  pod install
+  cd ..
+
+If VS Code Shows Errors:
+  1. CMD+Shift+P → "Developer: Reload Window"
+  2. Or restart VS Code
+
+Complete Reset:
+  flutter clean
+  cd ios && rm -rf Pods Podfile.lock && pod install && cd ..
+  flutter pub get
+
+
+📊 CURRENT CONFIGURATION
+─────────────────────────────────────────────────────────────
+
+Flutter:           3.35.6 (stable)
+Dart:              3.9.2
+Xcode:             26.0.1
+CocoaPods:         1.16.2
+Firebase SDK:      11.15.0
+iOS Target:        15.0+
+
+Dependencies:
+  ✅ firebase_core         3.15.2
+  ✅ firebase_auth         5.7.0
+  ✅ cloud_firestore       5.6.12
+  ✅ firebase_storage      12.4.10
+  ✅ firebase_messaging    15.2.10
+  ✅ image_picker          1.0.7
+  ✅ url_launcher          6.2.5
+
+
+📝 AVAILABLE SIMULATORS
+─────────────────────────────────────────────────────────────
+
+iPhone 17 Pro       → 8E50B3D4-6FA1-4744-B8CD-62B5F9CA2EE3
+iPhone 17 Pro Max   → CED6A978-13E8-4AEC-A5DE-28540D025EA7
+iPhone Air          → 8740D4BC-0FF1-489A-9581-E621B8909182
+iPhone 17           → ED5A98AB-816C-4215-9BD0-49CAB193DB6A
+iPhone 16e          → C6C738AA-0DAA-4009-BC9E-76BDD0832FB8
+iPhone 16e (Tutor)  → 0E1258B5-2DB9-4671-B9BF-C0362494F98E
+
+
+⚡ HOT RELOAD SHORTCUTS
+─────────────────────────────────────────────────────────────
+
+While app is running in terminal:
+  r  → Hot reload (fast)
+  R  → Hot restart (full restart)
+  d  → Detach (keep app running)
+  q  → Quit app
+
+
+🎯 WHAT'S WORKING
+─────────────────────────────────────────────────────────────
+
+✅ All entry points compile
+✅ Firebase integration
+✅ Authentication flows
+✅ Student/Tutor/Admin roles
+✅ Profile management
+✅ Avatar uploads
+✅ Booking system
+✅ Push notifications (code ready, needs device)
+✅ No critical errors
+✅ Stable dependencies
+
+
+⚠️  KNOWN NON-BLOCKING WARNINGS
+─────────────────────────────────────────────────────────────
+
+• use_build_context_synchronously - Safe async patterns
+• deprecated_member_use - API deprecations (non-critical)
+• avoid_print - Print statements (dev logging)
+
+These don't affect simulator testing.
+
+
+🚀 QUICK START STEPS
+─────────────────────────────────────────────────────────────
+
+1. Choose a simulator from the list above
+2. Pick an app entry point (student/tutor/admin/main)
+3. Run the command with simulator ID and entry point
+4. Wait for build and launch
+5. Press 'r' for hot reload during development
+
+
+📚 DOCUMENTATION
+─────────────────────────────────────────────────────────────
+
+SIMULATOR_SETUP.md       → Detailed setup guide
+STABILITY_CHECKLIST.md   → Environment verification
+launch_simulator.sh      → Interactive launcher
+TUTOR_FLOW.md           → Feature documentation
+PUSH_NOTIFICATIONS.md   → Push setup guide
+
+
+🔍 DIAGNOSTIC COMMANDS
+─────────────────────────────────────────────────────────────
+
+Check Environment:
+  flutter doctor -v
+
+List Devices:
+  flutter devices
+  xcrun simctl list devices available
+
+Analyze Code:
+  flutter analyze
+
+Check Dependencies:
+  flutter pub outdated
+
+View Logs:
+  flutter logs
+
+
+💡 PRO TIPS
+─────────────────────────────────────────────────────────────
+
+• Keep Xcode open for better build performance
+• Use hot reload (r) instead of full restart when possible
+• simulator runs faster in release mode: --release flag
+• Use VS Code Flutter extension for debugging
+• Install Flutter DevTools: dart devtools
+
+
+═════════════════════════════════════════════════════════════
+
+Status: ✅ READY TO RUN
+Your environment is stable and all apps are ready to launch!
+
+Last Verified: October 26, 2025
+
+═════════════════════════════════════════════════════════════

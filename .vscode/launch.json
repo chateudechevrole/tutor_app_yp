@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QuickTutor — Student (iPhone 16e)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main_student.dart",
+      "deviceId": "C6C738AA-0DAA-4009-BC9E-76BDD0832FB8"
+    },
+    {
+      "name": "QuickTutor — Tutor (iPhone 16e • Tutor)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main_tutor.dart",
+      "deviceId": "0E1258B5-2DB9-4671-B9BF-C0362494F98E"
+    },
+    {
+      "name": "QuickTutor — Admin (choose device)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart"
+      /* Tip: add "deviceId": "<UDID or name>" to pin a device, or leave it out to choose in the status bar */
+    }
+  ]
+}

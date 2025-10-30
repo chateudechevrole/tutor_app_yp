@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function isAdmin() { return get(/databases/$(db)/documents/users/$(uid())).data.role == "admin"; }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && userId == uid();
+      allow update: if isSignedIn() && (userId == uid() || isAdmin());
+    }
+
+    match /tutorProfiles/{tutorId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && (tutorId == uid() || isAdmin());
+    }
+
+    match /verificationRequests/{tutorId} {
+      allow create: if isSignedIn() && tutorId == uid();
+      allow read: if isSignedIn() && (tutorId == uid() || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow read, write: if isAdmin();
+      allow read, create, update: if isSignedIn();
+    }
+
+    match /notifications/{userId}/items/{notificationId} {
+      allow create: if isAdmin() || (isSignedIn() && userId == uid());
+      allow read, update: if isSignedIn() && (userId == uid() || isAdmin());
+    }
+
+    match /chats/{threadId} {
+      allow read, create, update: if isSignedIn();
+      match /messages/{messageId} {
+        allow read, create: if isSignedIn();
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "quicktutor-functions",
+  "private": true,
+  "scripts": {
+    "build": "echo \"skip build (Spark mode)\"",
+    "deploy": "echo \"skip deploy (Spark mode)\"",
+    "serve": "echo \"skip serve (Spark mode)\"",
+    "lint": "echo \"skip lint\""
+  }
+}

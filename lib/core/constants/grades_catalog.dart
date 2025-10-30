@@ -1,0 +1,15 @@
+const kGradesCatalog = [
+  'Primary 1',
+  'Primary 2',
+  'Primary 3',
+  'Primary 4',
+  'Primary 5',
+  'Primary 6',
+  'Form 1',
+  'Form 2',
+  'Form 3',
+  'Form 4',
+  'Form 5',
+  'A-Level',
+  'University',
+];
