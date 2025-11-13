@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../data/repositories/storage_repository.dart';
+import '../../core/storage_paths.dart';
 import '../../theme/tutor_theme.dart';
 import 'tutor_waiting_screen.dart';
+import 'shell/tutor_shell.dart';
 
 class TutorVerifyScreen extends StatefulWidget {
   const TutorVerifyScreen({super.key});
@@ -27,24 +29,33 @@ class _TutorVerifyScreenState extends State<TutorVerifyScreen> {
     String logicalName,
     Function(File, String) onSuccess,
   ) async {
+    print('📷 Picking file for: $logicalName');
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) return;
+    if (pickedFile == null) {
+      print('❌ No file picked');
+      return;
+    }
 
     final file = File(pickedFile.path);
     if (!mounted) return;
 
     setState(() => uploading = true);
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    print('👤 User ID: $uid');
+
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final ext = file.path.split('.').last;
-      final url = await _storage.putFile(
-        'verifications/$uid/${timestamp}_$logicalName.$ext',
-        file,
-      );
+      final fileName = '${timestamp}_$logicalName.$ext';
+      final uploadPath = verificationPath(uid, fileName);
+      print('📤 Upload path: $uploadPath');
+
+      final url = await _storage.putFile(uploadPath, file);
+      print('✅ Upload successful, URL received');
       onSuccess(file, url);
     } catch (e) {
+      print('❌ Upload failed in widget: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -76,8 +87,12 @@ class _TutorVerifyScreenState extends State<TutorVerifyScreen> {
                 icFile,
                 icUrl,
                 () => pickAndUploadFile('ic', (f, url) {
-                  icFile = f;
-                  icUrl = url;
+                  if (mounted) {
+                    setState(() {
+                      icFile = f;
+                      icUrl = url;
+                    });
+                  }
                 }),
               ),
               const SizedBox(height: 16),
@@ -86,8 +101,12 @@ class _TutorVerifyScreenState extends State<TutorVerifyScreen> {
                 eduFile,
                 eduUrl,
                 () => pickAndUploadFile('edu_cert', (f, url) {
-                  eduFile = f;
-                  eduUrl = url;
+                  if (mounted) {
+                    setState(() {
+                      eduFile = f;
+                      eduUrl = url;
+                    });
+                  }
                 }),
               ),
               const SizedBox(height: 16),
@@ -96,8 +115,12 @@ class _TutorVerifyScreenState extends State<TutorVerifyScreen> {
                 bankFile,
                 bankUrl,
                 () => pickAndUploadFile('bank_stmt', (f, url) {
-                  bankFile = f;
-                  bankUrl = url;
+                  if (mounted) {
+                    setState(() {
+                      bankFile = f;
+                      bankUrl = url;
+                    });
+                  }
                 }),
               ),
               const SizedBox(height: 24),
@@ -166,7 +189,14 @@ class _TutorVerifyScreenState extends State<TutorVerifyScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.tonal(
-                            onPressed: () => Navigator.pop(c),
+                            onPressed: () {
+                              Navigator.of(c).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const TutorShell(),
+                                ),
+                                (r) => false,
+                              );
+                            },
                             child: const Text('Complete Later'),
                           ),
                         ),

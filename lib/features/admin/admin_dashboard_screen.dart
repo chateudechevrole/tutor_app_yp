@@ -15,13 +15,13 @@ class AdminDashboardScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.pushNamed(c, Routes.verifyQueue),
           ),
-          ListTile(
-            title: const Text('Booking Records (TODO)'),
-            trailing: const Icon(Icons.chevron_right),
+          const ListTile(
+            title: Text('Booking Records (TODO)'),
+            trailing: Icon(Icons.chevron_right),
           ),
-          ListTile(
-            title: const Text('Users Management (TODO)'),
-            trailing: const Icon(Icons.chevron_right),
+          const ListTile(
+            title: Text('Users Management (TODO)'),
+            trailing: Icon(Icons.chevron_right),
           ),
         ],
       ),

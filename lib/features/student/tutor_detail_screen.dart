@@ -63,7 +63,7 @@ class TutorDetailScreen extends StatelessWidget {
                     ? NetworkImage(photoUrl)
                     : null,
                 child: photoUrl == null
-                    ? Icon(Icons.person, size: 60, color: kStudentDeep)
+                    ? const Icon(Icons.person, size: 60, color: kStudentDeep)
                     : null,
               ),
               const SizedBox(height: 16),

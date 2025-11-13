@@ -108,49 +108,115 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             return const Center(child: Text('No bookings found'));
           }
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Booking ID')),
-                  DataColumn(label: Text('Student')),
-                  DataColumn(label: Text('Tutor')),
-                  DataColumn(label: Text('Subject')),
-                  DataColumn(label: Text('Grade')),
-                  DataColumn(label: Text('Date/Time')),
-                  DataColumn(label: Text('Status')),
-                ],
-                rows: docs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>?;
-                  final bookingId = doc.id;
-                  final studentId = data?['studentId'] ?? 'N/A';
-                  final tutorId = data?['tutorId'] ?? 'N/A';
-                  final subject = data?['subject'] ?? 'N/A';
-                  final grade = data?['grade'] ?? 'N/A';
-                  final startAt = data?['startAt'] as Timestamp?;
-                  final status = data?['status'] ?? 'unknown';
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final data = doc.data() as Map<String, dynamic>? ?? {};
+              final bookingId = doc.id;
+              final studentName =
+                  (data['studentName'] ??
+                          data['studentId'] ??
+                          'Unknown Student')
+                      .toString();
+              final tutorName =
+                  (data['tutorName'] ?? data['tutorId'] ?? 'Unknown Tutor')
+                      .toString();
+              final subject = (data['subject'] ?? 'Not specified').toString();
+              final status = (data['status'] ?? 'unknown').toString();
+              final minutes = (data['minutes'] as num?)?.toInt();
+              final startTs =
+                  (data['classStartAt'] ?? data['startAt']) as Timestamp?;
+              final endTs = (data['classEndAt'] ?? data['endAt']) as Timestamp?;
+              final startAt = startTs?.toDate();
+              DateTime? endAt = endTs?.toDate();
+              if (endAt == null && startAt != null && minutes != null) {
+                endAt = startAt.add(Duration(minutes: minutes));
+              }
 
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(bookingId.substring(0, 8))),
-                      DataCell(Text(studentId.toString())),
-                      DataCell(Text(tutorId.toString())),
-                      DataCell(Text(subject.toString())),
-                      DataCell(Text(grade.toString())),
-                      DataCell(
-                        Text(
-                          startAt != null
-                              ? _formatDateTime(startAt.toDate())
-                              : 'N/A',
-                        ),
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Booking ID',
+                                  style: Theme.of(context).textTheme.labelMedium
+                                      ?.copyWith(color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 4),
+                                SelectableText(
+                                  bookingId,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildStatusPill(status),
+                        ],
                       ),
-                      DataCell(_buildStatusPill(status.toString())),
+                      const SizedBox(height: 16),
+                      _buildInfoLine(
+                        context,
+                        icon: Icons.person_outline,
+                        label: 'Student',
+                        value: studentName,
+                      ),
+                      _buildInfoLine(
+                        context,
+                        icon: Icons.school_outlined,
+                        label: 'Tutor',
+                        value: tutorName,
+                      ),
+                      _buildInfoLine(
+                        context,
+                        icon: Icons.menu_book_outlined,
+                        label: 'Subject',
+                        value: subject,
+                      ),
+                      if (minutes != null)
+                        _buildInfoLine(
+                          context,
+                          icon: Icons.timer_outlined,
+                          label: 'Duration',
+                          value: '$minutes minutes',
+                        ),
+                      _buildInfoLine(
+                        context,
+                        icon: Icons.play_circle_outline,
+                        label: 'Class starts',
+                        value: startAt != null
+                            ? _formatDateTime(startAt)
+                            : 'Not scheduled',
+                      ),
+                      _buildInfoLine(
+                        context,
+                        icon: Icons.stop_circle_outlined,
+                        label: 'Class ends',
+                        value: endAt != null
+                            ? _formatDateTime(endAt)
+                            : 'Not scheduled',
+                      ),
                     ],
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -176,34 +242,82 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
   }
 
   String _formatDateTime(DateTime dt) {
-    return '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = _getMonthName(dt.month);
+    return '$day $month ${dt.year} • $hour:$minute $period';
   }
 
   Widget _buildStatusPill(String status) {
     Color color;
     switch (status.toLowerCase()) {
       case 'done':
+      case 'completed':
         color = Colors.green;
         break;
       case 'booked':
+      case 'paid':
+      case 'accepted':
         color = Colors.blue;
         break;
       case 'cancelled':
+      case 'rejected':
         color = Colors.red;
         break;
       default:
         color = Colors.grey;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
+    return Chip(
+      backgroundColor: color.withValues(alpha: 0.15),
+      label: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
       ),
-      child: Text(
-        status,
-        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+    );
+  }
+
+  Widget _buildInfoLine(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

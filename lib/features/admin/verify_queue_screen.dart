@@ -2,6 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+bool _isImageUrl(String url) {
+  final uri = Uri.parse(url);
+  final path = uri.path.toLowerCase();
+  return path.endsWith('.jpg') || 
+         path.endsWith('.jpeg') || 
+         path.endsWith('.png') || 
+         path.endsWith('.gif') ||
+         path.endsWith('.webp');
+}
+
+bool _isPdfUrl(String url) {
+  final uri = Uri.parse(url);
+  return uri.path.toLowerCase().endsWith('.pdf');
+}
+
 class VerifyQueueScreen extends StatelessWidget {
   const VerifyQueueScreen({super.key});
   @override
@@ -101,14 +116,64 @@ class VerifyQueueScreen extends StatelessWidget {
       trailing: url != null
           ? TextButton(
               onPressed: () async {
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
+                if (_isImageUrl(url)) {
+                  // Show in-app image preview
+                  _showImagePreview(c, url, label);
+                } else if (_isPdfUrl(url)) {
+                  // Open PDF in browser
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                } else {
+                  // Fallback for unknown types
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
                 }
               },
               child: const Text('View'),
             )
           : const Text('Not uploaded', style: TextStyle(color: Colors.grey)),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Stack(
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBar(
+                  title: Text(title),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                ),
+                Expanded(
+                  child: InteractiveViewer(
+                    child: Image.network(imageUrl),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

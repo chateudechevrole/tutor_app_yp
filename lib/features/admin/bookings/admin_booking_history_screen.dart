@@ -478,7 +478,7 @@ class _AdminBookingHistoryScreenState extends State<AdminBookingHistoryScreen> {
   }
 
   Widget _buildEmptyState() {
-    String message = _searchQuery.isNotEmpty
+    final String message = _searchQuery.isNotEmpty
         ? 'No bookings match your search'
         : 'No bookings found';
 

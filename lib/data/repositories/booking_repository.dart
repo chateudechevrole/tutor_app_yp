@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/firestore_paths.dart';
 import '../models/booking_model.dart';
+import 'message_repository.dart';
 
 class BookingRepo {
   final _db = FirebaseFirestore.instance;
@@ -136,5 +137,57 @@ class BookingRepo {
       'pending': bookings.where((d) => d.data()['status'] == 'pending').length,
       'cancelled': bookings.where((d) => d.data()['status'] == 'cancelled').length,
     };
+  }
+
+  /// Accept a booking and mark tutor as busy
+  Future<void> acceptBooking(String bookingId, String tutorId) async {
+    // Get tutor name for welcome message
+    final tutorDoc = await _db.doc('tutorProfiles/$tutorId').get();
+    final tutorName = tutorDoc.data()?['displayName'] as String? ?? 'Your Tutor';
+    
+    final batch = _db.batch();
+    
+    // Update booking status
+    final bookingRef = _db.doc('bookings/$bookingId');
+    batch.update(bookingRef, {
+      'status': 'accepted',
+      'acceptedAt': FieldValue.serverTimestamp(),
+    });
+    
+    // Mark tutor as busy
+    final tutorRef = _db.doc('tutorProfiles/$tutorId');
+    batch.update(tutorRef, {
+      'isBusy': true,
+    });
+    
+    await batch.commit();
+
+    // Send welcome message to student
+    final messageRepo = MessageRepository();
+    await messageRepo.sendWelcomeMessage(
+      bookingId: bookingId,
+      tutorId: tutorId,
+      tutorName: tutorName,
+    );
+  }
+
+  /// Reject a booking and ensure tutor is not marked as busy
+  Future<void> rejectBooking(String bookingId, String tutorId) async {
+    final batch = _db.batch();
+    
+    // Update booking status to cancelled
+    final bookingRef = _db.doc('bookings/$bookingId');
+    batch.update(bookingRef, {
+      'status': 'cancelled',
+      'cancelledAt': FieldValue.serverTimestamp(),
+    });
+    
+    // Ensure tutor is not busy (in case this was the only active booking)
+    final tutorRef = _db.doc('tutorProfiles/$tutorId');
+    batch.update(tutorRef, {
+      'isBusy': false,
+    });
+    
+    await batch.commit();
   }
 }

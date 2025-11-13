@@ -6,7 +6,7 @@ const Color kAccent = Color(0xFFFFD54A);
 
 final ThemeData tutorTheme = ThemeData(
   useMaterial3: true,
-  colorScheme: ColorScheme.light(
+  colorScheme: const ColorScheme.light(
     primary: kPrimary,
     secondary: kAccent,
     surface: kBg,
@@ -23,11 +23,11 @@ final ThemeData tutorTheme = ThemeData(
       foregroundColor: Colors.white,
     ),
   ),
-  chipTheme: ChipThemeData(
+  chipTheme: const ChipThemeData(
     backgroundColor: kBg,
     selectedColor: kAccent,
-    labelStyle: const TextStyle(color: kPrimary),
-    side: const BorderSide(color: kPrimary, width: 1),
+    labelStyle: TextStyle(color: kPrimary),
+    side: BorderSide(color: kPrimary, width: 1),
   ),
   inputDecorationTheme: InputDecorationTheme(
     border: OutlineInputBorder(

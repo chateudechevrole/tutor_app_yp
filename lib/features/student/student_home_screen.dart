@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/app_routes.dart';
 import '../../data/repositories/tutor_repository.dart';
 import '../../theme/student_theme.dart';
+import 'widgets/student_app_bar.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
@@ -70,14 +71,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kStudentBg,
-      appBar: AppBar(
-        title: Text(
-          'Find Tutor Now ✨',
-          style: TextStyle(color: kStudentDeep, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: kStudentBg,
-        elevation: 0,
-      ),
+      extendBodyBehindAppBar: false,
+      appBar: const StudentAppBar(title: 'Find Tutor Now ✨', activeIndex: 0),
       body: Column(
         children: [
           _buildFilterRow(),
@@ -145,7 +140,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               children: [
                 Text(
                   'Select $label',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: kStudentDeep,
@@ -200,7 +195,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down, color: kStudentDeep, size: 20),
+            const Icon(Icons.arrow_drop_down, color: kStudentDeep, size: 20),
           ],
         ),
       ),
@@ -243,6 +238,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           }
 
           final docs = snapshot.data!.docs;
+
+          // Debug: Log tutor count
+          debugPrint(
+            '[search] tutors returned: ${docs.length} (online + verified + not busy)',
+          );
 
           if (docs.isEmpty) {
             return Center(
@@ -298,16 +298,22 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   leading: CircleAvatar(
                     backgroundColor: kStudentDeep,
                     foregroundColor: Colors.white,
-                    backgroundImage: photoUrl != null
+                    backgroundImage:
+                        photoUrl != null &&
+                            photoUrl.isNotEmpty &&
+                            !photoUrl.startsWith('file://')
                         ? NetworkImage(photoUrl)
                         : null,
-                    child: photoUrl == null
+                    child:
+                        photoUrl == null ||
+                            photoUrl.isEmpty ||
+                            photoUrl.startsWith('file://')
                         ? Text(name.substring(0, 1).toUpperCase())
                         : null,
                   ),
                   title: Text(
                     name,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: kStudentDeep,
                       fontWeight: FontWeight.w600,
                     ),
@@ -334,11 +340,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.star, color: kStudentDeep, size: 14),
+                              const Icon(
+                                Icons.star,
+                                color: kStudentDeep,
+                                size: 14,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 avgRating.toStringAsFixed(1),
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: kStudentDeep,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,

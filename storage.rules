@@ -2,23 +2,48 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
     function isAdmin() {
-      return signedIn() && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+      return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
-    // Student/admin avatars
-    match /avatars/{uid}.jpg {
-      allow write: if signedIn() && request.auth.uid == uid;
-      allow read: if true;
+
+    // 1) Public avatars: avatars/{uid}/profile.jpg (public read, owner write)
+    match /avatars/{uid}/{file} {
+      allow read:  if true;
+      allow write: if isOwner(uid);
     }
-    // Tutor verification files
-    match /verifications/{uid}/{allPaths=**} {
-      allow write: if signedIn() && request.auth.uid == uid;
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+
+    // 2) Tutor verification: verifications/{uid}/{file} (owner write; owner/admin read)
+    match /verifications/{uid}/{file} {
+      allow write: if isOwner(uid);
+      allow read:  if signedIn() && (isOwner(uid) || isAdmin());
     }
-    // Tutor avatars
+
+    // 3) Chat attachments: chat_attachments/{threadId}/{file} (signed-in read/write)
+    match /chat_attachments/{threadId}/{file} {
+      allow write: if signedIn();
+      allow read:  if signedIn();
+    }
+
+    // 4) Tutor avatars (legacy)
     match /tutor_avatars/{file} {
       allow write: if signedIn();
       allow read: if true;
     }
+
+    // 5) Tutor profile photos
+    match /profilePhotos/{uid}/avatar.jpg {
+      allow write: if isOwner(uid);
+      allow read: if true;
+    }
+
+    // 6) Booking files
+    match /bookings/{bookingId}/{allPaths=**} {
+      allow write: if signedIn();
+      allow read: if signedIn();
+    }
+
+    // deny everything else
+    match /{allPaths=**} { allow read, write: if false; }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,23 +17,27 @@ class _TutorDashboardScreenState extends State<TutorDashboardScreen> {
   bool online = false;
   bool tutorVerified = false;
   final _repo = TutorRepo();
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
 
   @override
   void initState() {
     super.initState();
     _loadOnlineStatus();
     _checkVerification();
+    _subscribeToOnlineChanges();
+  }
+
+  @override
+  void dispose() {
+    _profileSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkVerification() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final snap = await FirebaseFirestore.instance.doc('users/$uid').get();
     final verified = snap.data()?['tutorVerified'] ?? false;
-    if (!verified && mounted) {
-      Navigator.pushReplacementNamed(context, Routes.tutorVerify);
-    } else {
-      setState(() => tutorVerified = verified);
-    }
+    setState(() => tutorVerified = verified);
   }
 
   Future<void> _loadOnlineStatus() async {
@@ -40,8 +46,24 @@ class _TutorDashboardScreenState extends State<TutorDashboardScreen> {
         .doc('tutorProfiles/$uid')
         .get();
     if (snap.exists && mounted) {
-      setState(() => online = snap.data()?['isOnline'] ?? false);
+      final data = snap.data();
+      setState(() => online = (data?['isOnline'] ?? data?['online'] ?? false) == true);
     }
+  }
+
+  void _subscribeToOnlineChanges() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    _profileSub = FirebaseFirestore.instance
+        .doc('tutorProfiles/$uid')
+        .snapshots()
+        .listen((snapshot) {
+      final data = snapshot.data();
+      final newStatus = (data?['isOnline'] ?? data?['online'] ?? false) == true;
+      if (mounted && newStatus != online) {
+        setState(() => online = newStatus);
+      }
+    });
   }
 
   @override
@@ -123,12 +145,52 @@ class _TutorDashboardScreenState extends State<TutorDashboardScreen> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            if (!hasRecords) ...[
+            if (!tutorVerified) ...[
               Card(
+                color: Colors.orange.shade50,
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade700),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Verification Required',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Complete identity verification to start accepting bookings.',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, Routes.tutorVerify);
+                        },
+                        child: const Text('Verify Now'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (!hasRecords) ...[
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
                   child: Column(
-                    children: const [
+                    children: [
                       Icon(Icons.library_books, size: 48, color: Colors.grey),
                       SizedBox(height: 16),
                       Text(
@@ -178,21 +240,20 @@ class _TutorDashboardScreenState extends State<TutorDashboardScreen> {
               ),
             ],
             const SizedBox(height: 24),
+            _buildMenuItem('Booking Requests', Icons.notifications_active, () {
+              Navigator.pushNamed(context, Routes.tutorBookings);
+            }, badge: true),
             _buildMenuItem('Class History', Icons.history, () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Class History - Coming Soon')),
-              );
+              Navigator.pushNamed(context, Routes.tutorClassHistory);
             }),
             _buildMenuItem('Earnings & Payout', Icons.payment, () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Earnings - Coming Soon')),
-              );
+              Navigator.pushNamed(context, Routes.tutorEarnings);
             }),
             _buildMenuItem('Identity Verification', Icons.verified_user, () {
               Navigator.pushNamed(context, Routes.tutorVerify);
             }),
             _buildMenuItem('Account Setting', Icons.settings, () {
-              Navigator.pushNamed(context, Routes.tutorEdit);
+              Navigator.pushNamed(context, Routes.tutorAccountSettings);
             }),
           ],
         );
@@ -227,12 +288,29 @@ class _TutorDashboardScreenState extends State<TutorDashboardScreen> {
     );
   }
 
-  Widget _buildMenuItem(String title, IconData icon, VoidCallback onTap) {
+  Widget _buildMenuItem(String title, IconData icon, VoidCallback onTap, {bool badge = false}) {
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(icon, color: kPrimary),
+        leading: Stack(
+          children: [
+            Icon(icon, color: kPrimary),
+            if (badge)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,

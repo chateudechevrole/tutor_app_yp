@@ -6,5 +6,12 @@
     "deploy": "echo \"skip deploy (Spark mode)\"",
     "serve": "echo \"skip serve (Spark mode)\"",
     "lint": "echo \"skip lint\""
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
   }
 }

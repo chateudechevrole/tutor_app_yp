@@ -8,12 +8,24 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && userId == uid();
-      allow update: if isSignedIn() && (userId == uid() || isAdmin());
+      // Prevent non-admin users from changing their role once it's set
+      allow update: if isSignedIn() && (userId == uid() || isAdmin()) &&
+        (isAdmin() || 
+         // User can update their own doc, but cannot change role if it already exists
+         (userId == uid() && (
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+           resource.data.role == null || resource.data.role == ''
+         )));
     }
 
     match /tutorProfiles/{tutorId} {
       allow read: if true;
       allow create, update: if isSignedIn() && (tutorId == uid() || isAdmin());
+    }
+
+    match /studentProfiles/{studentId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (studentId == uid() || isAdmin());
     }
 
     match /verificationRequests/{tutorId} {
@@ -22,13 +34,35 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    function bookingData(bookingId) {
+      return get(/databases/$(db)/documents/bookings/$(bookingId)).data;
+    }
+    function isBookingParticipant(bookingId) {
+      let booking = bookingData(bookingId);
+      return booking != null && (
+        booking.studentId == uid() ||
+        booking.tutorId == uid() ||
+        isAdmin()
+      );
+    }
+
     match /bookings/{bookingId} {
       allow read, write: if isAdmin();
       allow read, create, update: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, create: if isBookingParticipant(bookingId);
+        allow update: if isBookingParticipant(bookingId);
+      }
     }
 
     match /notifications/{userId}/items/{notificationId} {
-      allow create: if isAdmin() || (isSignedIn() && userId == uid());
+      // Allow creating notifications for tutors when students book (booking participants)
+      allow create: if isAdmin() || 
+        (isSignedIn() && userId == uid()) ||
+        (isSignedIn() && request.resource.data.keys().hasAll(['bookingId', 'tutorId', 'studentId']) && 
+          request.resource.data.tutorId == userId && 
+          request.resource.data.studentId == uid());
       allow read, update: if isSignedIn() && (userId == uid() || isAdmin());
     }
 
@@ -37,6 +71,32 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read, create: if isSignedIn();
       }
+    }
+
+    // Collection group for classSessions (can be nested anywhere)
+    match /{path=**}/classSessions/{sessionId} {
+      allow read: if isSignedIn() && (
+        resource.data.tutorId == uid() || 
+        resource.data.studentId == uid() || 
+        isAdmin()
+      );
+      allow create, update: if isSignedIn() && (
+        request.resource.data.tutorId == uid() || 
+        request.resource.data.studentId == uid() || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Collection group for payouts (can be nested anywhere)
+    match /{path=**}/payouts/{payoutId} {
+      allow read: if isSignedIn() && (
+        resource.data.tutorId == uid() || 
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.tutorId == uid();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

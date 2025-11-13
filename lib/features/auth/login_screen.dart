@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../core/app_routes.dart';
 
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext c) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Sign in')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -36,22 +37,69 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? const CircularProgressIndicator()
                 : FilledButton(
                     onPressed: () async {
+                      final args = ModalRoute.of(context)?.settings.arguments;
+                      final mapArgs =
+                          args is Map ? args.cast<String, dynamic>() : null;
+                      final targetRole = mapArgs?['targetRole'] as String?;
+                      final redirectRoute =
+                          mapArgs?['redirectRoute'] as String?;
+
                       setState(() => loading = true);
+
+                      var errorMessage = '';
+                      var success = false;
+
                       try {
                         await _auth.signIn(email.text.trim(), pass.text.trim());
-                        if (mounted) {
-                          Navigator.pushReplacementNamed(c, Routes.roleGate);
+
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (targetRole != null && user != null) {
+                          final userSnap = await FirebaseFirestore.instance
+                              .doc('users/${user.uid}')
+                              .get();
+                          final actualRole =
+                              (userSnap.data()?['role'] ?? '').toString();
+
+                          if (actualRole != targetRole) {
+                            errorMessage = targetRole == 'tutor'
+                                ? 'This account is not registered as a tutor.'
+                                : 'This account is not registered as a $targetRole.';
+                            await FirebaseAuth.instance.signOut();
+                          } else {
+                            success = true;
+                          }
+                        } else {
+                          success = true;
                         }
                       } on FirebaseAuthException catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(c).showSnackBar(
-                            SnackBar(
-                              content: Text(e.message ?? 'Login failed'),
-                            ),
-                          );
-                        }
+                        errorMessage = e.message ?? 'Login failed';
                       } finally {
                         if (mounted) setState(() => loading = false);
+                      }
+
+                      if (!mounted) return;
+
+                      if (!success) {
+                        if (errorMessage.isNotEmpty) {
+                          ScaffoldMessenger.of(c).showSnackBar(
+                            SnackBar(content: Text(errorMessage)),
+                          );
+                        }
+                        return;
+                      }
+
+                      final navigator = Navigator.of(c);
+
+                      if (navigator.canPop()) {
+                        navigator.pop(true);
+                      } else {
+                        final fallbackRoute = redirectRoute ??
+                            (targetRole == 'tutor'
+                                ? Routes.tutorShell
+                                : targetRole == 'student'
+                                    ? Routes.studentShell
+                                    : Routes.roleGate);
+                        navigator.pushReplacementNamed(fallbackRoute);
                       }
                     },
                     child: const Text('Sign In'),

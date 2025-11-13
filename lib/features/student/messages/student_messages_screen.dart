@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/student_theme.dart';
-import '../../../data/repositories/chat_repository.dart';
-import '../../../core/app_routes.dart';
+import '../../chat/chat_screen.dart';
+import '../widgets/student_app_bar.dart';
 
 class StudentMessagesScreen extends StatelessWidget {
   const StudentMessagesScreen({super.key});
@@ -24,26 +24,23 @@ class StudentMessagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: kStudentBg,
-        body: const Center(child: Text('Please sign in.')),
+        body: Center(child: Text('Please sign in.')),
       );
     }
 
-    final chatRepo = ChatRepo();
-
     return Scaffold(
       backgroundColor: kStudentBg,
-      appBar: AppBar(
-        title: Text(
-          'Messages',
-          style: TextStyle(color: kStudentDeep, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: kStudentBg,
-        elevation: 0,
-      ),
+      extendBodyBehindAppBar: false,
+      appBar: const StudentAppBar(title: 'Messages', activeIndex: 1),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: chatRepo.threadsForUser(uid),
+        stream: FirebaseFirestore.instance
+            .collection('bookings')
+            .where('studentId', isEqualTo: uid)
+            .where('status', whereIn: ['accepted', 'in_progress', 'completed'])
+            .orderBy('lastMessageAt', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -56,7 +53,7 @@ class StudentMessagesScreen extends StatelessWidget {
                     color: kStudentDeep.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'Couldn\'t load messages.',
                     style: TextStyle(
                       color: kStudentDeep,
@@ -109,7 +106,7 @@ class StudentMessagesScreen extends StatelessWidget {
                     color: kStudentDeep.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'No messages yet.',
                     style: TextStyle(
                       color: kStudentDeep,
@@ -135,85 +132,139 @@ class StudentMessagesScreen extends StatelessWidget {
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data();
-              final threadId = docs[index].id;
-              final members =
-                  (data['members'] as List<dynamic>?)?.cast<String>() ?? [];
-              final otherUid = members.firstWhere(
-                (m) => m != uid,
-                orElse: () => '',
-              );
+              final bookingId = docs[index].id;
+              final tutorName = data['tutorName'] ?? 'Tutor';
+              final subject = data['subject'] ?? 'Session';
               final lastMessage = data['lastMessage'] ?? '';
-              final updatedAt = data['updatedAt'] as Timestamp?;
+              final updatedAt = data['lastMessageAt'] as Timestamp?;
+              final hasUnread =
+                  data['hasUnreadMessages'] == true &&
+                  data['lastMessageSender'] != uid;
               final timeStr = _formatTime(updatedAt);
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(otherUid)
-                    .get(),
-                builder: (context, userSnapshot) {
-                  String otherName = 'User';
-                  if (userSnapshot.hasData) {
-                    final userData =
-                        userSnapshot.data!.data() as Map<String, dynamic>?;
-                    otherName = userData?['displayName'] ?? 'User';
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: kStudentDeep, width: 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      leading: CircleAvatar(
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: hasUnread
+                        ? kStudentDeep
+                        : kStudentDeep.withValues(alpha: 0.3),
+                    width: hasUnread ? 2 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: Stack(
+                    children: [
+                      CircleAvatar(
                         backgroundColor: kStudentDeep,
                         foregroundColor: Colors.white,
                         child: Text(
-                          otherName.substring(0, 1).toUpperCase(),
+                          tutorName.substring(0, 1).toUpperCase(),
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      title: Text(
-                        otherName,
-                        style: TextStyle(
-                          color: kStudentDeep,
-                          fontWeight: FontWeight.w600,
+                      if (hasUnread)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tutorName,
+                          style: TextStyle(
+                            color: kStudentDeep,
+                            fontWeight: hasUnread
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
                         ),
                       ),
-                      subtitle: lastMessage.isNotEmpty
-                          ? Text(
-                              lastMessage,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: kStudentDeep.withValues(alpha: 0.6),
-                                fontSize: 13,
-                              ),
-                            )
-                          : null,
-                      trailing: Text(
-                        timeStr,
+                      if (hasUnread)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject,
                         style: TextStyle(
-                          color: kStudentDeep.withValues(alpha: 0.5),
+                          color: kStudentDeep.withValues(alpha: 0.7),
                           fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          Routes.studentChat,
-                          arguments: threadId,
-                        );
-                      },
+                      if (lastMessage.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          lastMessage,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: kStudentDeep.withValues(alpha: 0.6),
+                            fontSize: 13,
+                            fontWeight: hasUnread
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: Text(
+                    timeStr,
+                    style: TextStyle(
+                      color: kStudentDeep.withValues(alpha: 0.5),
+                      fontSize: 12,
                     ),
-                  );
-                },
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          bookingId: bookingId,
+                          otherUserName: tutorName,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               );
             },
           );

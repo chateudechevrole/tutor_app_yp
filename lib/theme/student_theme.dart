@@ -17,7 +17,7 @@ final studentTheme = ThemeData(
     onSurface: kStudentDeep,
   ),
   scaffoldBackgroundColor: kStudentBg,
-  appBarTheme: AppBarTheme(
+  appBarTheme: const AppBarTheme(
     backgroundColor: kStudentBg,
     foregroundColor: kStudentDeep,
     elevation: 0,
@@ -31,7 +31,7 @@ final studentTheme = ThemeData(
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: kStudentDeep,
-      side: BorderSide(color: kStudentDeep),
+      side: const BorderSide(color: kStudentDeep),
     ),
   ),
   chipTheme: ChipThemeData(

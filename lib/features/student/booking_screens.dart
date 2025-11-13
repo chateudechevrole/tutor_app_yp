@@ -44,6 +44,9 @@ class BookingConfirmScreen extends StatelessWidget {
     final displayName =
         tutorData['displayName'] ?? tutorData['email'] ?? 'Tutor';
     final photoUrl = tutorData['photoUrl'] as String?;
+    final hasNetworkPhoto = photoUrl != null &&
+        photoUrl.isNotEmpty &&
+        !photoUrl.startsWith('file://');
     final subjects = List<String>.from(tutorData['subjects'] ?? []);
 
     return Column(
@@ -61,11 +64,10 @@ class BookingConfirmScreen extends StatelessWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: kStudentDeep.withValues(alpha: 0.1),
-                        backgroundImage: photoUrl != null
-                            ? NetworkImage(photoUrl)
-                            : null,
-                        child: photoUrl == null
-                            ? Icon(Icons.person, color: kStudentDeep)
+                        backgroundImage:
+                            hasNetworkPhoto ? NetworkImage(photoUrl) : null,
+                        child: !hasNetworkPhoto
+                            ? const Icon(Icons.person, color: kStudentDeep)
                             : null,
                       ),
                       const SizedBox(width: 16),
@@ -210,42 +212,44 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   Future<void> _processPayment() async {
     setState(() => _processing = true);
 
-    // Simulate payment processing
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Simulate payment processing
+      await Future.delayed(const Duration(seconds: 2));
 
-    // Create booking record
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc();
-    final bookingId = bookingRef.id;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw FirebaseException(
+          plugin: 'firebase_auth',
+          message: 'You need to be signed in to complete the payment.',
+        );
+      }
 
-    await bookingRef.set({
-      'studentId': uid,
-      'tutorId': widget.tutorId,
-      'amount': widget.amount,
-      'duration': 45,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-      'paymentStatus': 'completed',
-    });
+      // Create booking record
+      final bookingRef =
+          FirebaseFirestore.instance.collection('bookings').doc();
+      final bookingId = bookingRef.id;
 
-    // Create in-app notification for tutor
-    final notifRef = FirebaseFirestore.instance
-        .collection('notifications')
-        .doc(widget.tutorId)
-        .collection('items')
-        .doc();
+      final bookingData = {
+        'bookingId': bookingId,
+        'studentId': user.uid,
+        'tutorId': widget.tutorId,
+        'price': widget.amount,
+        'amount': widget.amount,
+        'durationMin': 45,
+        'status': 'requested',
+        'paymentStatus': 'paid',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-    await notifRef.set({
-      'type': 'booking_created',
-      'bookingId': bookingId,
-      'fromUserId': uid,
-      'title': 'New booking request',
-      'body': 'A student just booked you. Tap to review.',
-      'createdAt': FieldValue.serverTimestamp(),
-      'read': false,
-    });
+      await bookingRef.set(bookingData);
 
-    if (mounted) {
+      // Note: Tutors will see bookings directly in their booking list
+      // No need for separate notifications collection - avoids permission issues
+      debugPrint('✅ Booking created: $bookingId for tutor ${widget.tutorId}');
+
+      if (!mounted) return;
+
       setState(() => _processing = false);
 
       // Show success dialog
@@ -275,6 +279,22 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               child: const Text('Done'),
             ),
           ],
+        ),
+      );
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Unable to complete the payment.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
         ),
       );
     }

@@ -1,83 +1,111 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../login/admin_login_screen.dart';
-import '../debug/admin_debug.dart';
+import '../../../core/app_routes.dart';
 
-class AdminGate extends StatefulWidget {
+class AdminGate extends StatelessWidget {
   final Widget child;
   const AdminGate({super.key, required this.child});
 
   @override
-  State<AdminGate> createState() => _AdminGateState();
-}
-
-class _AdminGateState extends State<AdminGate> {
-  @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, authSnapshot) {
+        // Show loading while checking auth
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final user = snapshot.data;
+        final user = authSnapshot.data;
+
+        // No user - show welcome screen with sign in button
         if (user == null) {
-          return const AdminLoginScreen();
+          return Scaffold(
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.admin_panel_settings, size: 80),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Welcome to QuickTutor Admin',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Please sign in to continue.'),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          Routes.login,
+                          arguments: const {'targetRole': 'admin'},
+                        );
+                      },
+                      child: const Text('Sign In'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
+        // User exists - check role
         return FutureBuilder<DocumentSnapshot>(
           future: FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get(),
-          builder: (context, docSnapshot) {
-            if (!docSnapshot.hasData) {
+          builder: (context, userSnapshot) {
+            if (!userSnapshot.hasData) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
 
-            final data = docSnapshot.data?.data() as Map<String, dynamic>?;
-            final role = data?['role'] ?? '';
+            final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+            final role = userData?['role'] ?? '';
 
             if (role != 'admin') {
-              return Scaffold(
+              // Schedule sign out after build
+              Future.microtask(() async {
+                await FirebaseAuth.instance.signOut();
+              });
+
+              return const Scaffold(
                 body: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.block, size: 80, color: Colors.red),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'This account is not an admin.',
+                        Icon(Icons.block, size: 80, color: Colors.red),
+                        SizedBox(height: 24),
+                        Text(
+                          'This app is for admins only.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: () async {
-                            await FirebaseAuth.instance.signOut();
-                          },
-                          child: const Text('Sign Out'),
+                        SizedBox(height: 8),
+                        Text(
+                          'Signing out...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16),
                         ),
-                        if (kDebugMode)
-                          TextButton(
-                            onPressed: () async {
-                              await debugPromoteToAdmin(context);
-                              if (context.mounted) setState(() {});
-                            },
-                            child: const Text('Promote this account (debug)'),
-                          ),
+                        SizedBox(height: 24),
+                        CircularProgressIndicator(),
                       ],
                     ),
                   ),
@@ -85,7 +113,7 @@ class _AdminGateState extends State<AdminGate> {
               );
             }
 
-            return widget.child;
+            return child;
           },
         );
       },

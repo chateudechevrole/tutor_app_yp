@@ -19,6 +19,9 @@ class TutorProfileScreen extends StatelessWidget {
           }
           final d = s.data!.data() ?? {};
           final photoUrl = d['photoUrl'] as String?;
+          final hasNetworkPhoto = photoUrl != null &&
+              photoUrl.isNotEmpty &&
+              !photoUrl.startsWith('file://');
           final displayName = d['displayName'] as String? ?? 'Tutor';
           final email = d['email'] as String? ?? '';
           final intro = d['intro'] as String? ?? 'No introduction provided.';
@@ -54,10 +57,8 @@ class TutorProfileScreen extends StatelessWidget {
                         radius: 60,
                         backgroundColor: Colors.grey.shade200,
                         backgroundImage:
-                            (photoUrl != null && photoUrl.isNotEmpty)
-                            ? NetworkImage(photoUrl)
-                            : null,
-                        child: (photoUrl == null || photoUrl.isEmpty)
+                            hasNetworkPhoto ? NetworkImage(photoUrl) : null,
+                        child: !hasNetworkPhoto
                             ? const Icon(
                                 Icons.person,
                                 size: 60,
@@ -276,6 +277,15 @@ class TutorProfileScreen extends StatelessWidget {
           .limit(5)
           .snapshots(),
       builder: (ctx, snapshot) {
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          if (error is FirebaseException && error.code == 'permission-denied') {
+            debugPrint('Tutor reviews permission denied for tutor $tutorId');
+            return _buildNoReviewsCard();
+          }
+          return _buildReviewsErrorCard();
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: Padding(
@@ -286,27 +296,7 @@ class TutorProfileScreen extends StatelessWidget {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.rate_review_outlined,
-                  size: 48,
-                  color: Colors.grey.shade400,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'No reviews yet',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                ),
-              ],
-            ),
-          );
+          return _buildNoReviewsCard();
         }
 
         return Column(
@@ -363,6 +353,55 @@ class TutorProfileScreen extends StatelessWidget {
           }).toList(),
         );
       },
+    );
+  }
+
+  Widget _buildNoReviewsCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.star_border,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No ratings yet',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsErrorCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 48,
+            color: Colors.red.shade300,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reviews are temporarily unavailable',
+            style: TextStyle(color: Colors.red.shade300, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

@@ -5,12 +5,16 @@ import '../../core/app_routes.dart';
 import '../../theme/tutor_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// @deprecated This screen is deprecated. Use the shared LoginScreen instead.
+/// This file will be removed in a future version.
+/// The app now uses role-based routing from a single login screen.
 class TutorLoginScreen extends StatefulWidget {
   const TutorLoginScreen({super.key});
   @override
   State<TutorLoginScreen> createState() => _TutorLoginScreenState();
 }
 
+// TODO: Remove this file after confirming all references are updated to use shared LoginScreen
 class _TutorLoginScreenState extends State<TutorLoginScreen> {
   final email = TextEditingController();
   final pass = TextEditingController();

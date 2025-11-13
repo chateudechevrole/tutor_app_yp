@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
+import '../features/auth/landing_screen.dart';
 import '../features/student/student_home_screen.dart';
 import '../features/student/shell/student_shell.dart';
 import '../features/student/profile/student_profile_screen.dart';
@@ -19,6 +20,9 @@ import '../features/tutor/tutor_chats_screen.dart';
 import '../features/tutor/tutor_chat_screen.dart';
 import '../features/tutor/tutor_bookings_screen.dart';
 import '../features/tutor/tutor_booking_detail_screen.dart';
+import '../features/tutor/class_history/class_history_screen.dart';
+import '../features/tutor/earnings/earnings_payout_screen.dart';
+import '../features/tutor/account/tutor_account_settings_screen.dart';
 import '../features/tutor/shell/tutor_shell.dart';
 import '../features/admin/admin_login_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
@@ -33,6 +37,7 @@ import '../features/admin/home/admin_home_screen.dart';
 import '../main.dart' show RoleGate;
 
 class Routes {
+  static const landing = '/landing';
   static const login = '/login';
   static const signup = '/signup';
   static const roleGate = '/role-gate';
@@ -46,6 +51,7 @@ class Routes {
   static const bookingConfirm = '/student/booking-confirm';
   static const payment = '/student/payment';
   static const tutorShell = '/tutor/shell';
+  // TODO: Deprecated - Remove after migration to shared LoginScreen
   static const tutorLogin = '/tutor/login';
   static const tutorVerify = '/tutor/verify';
   static const tutorWaiting = '/tutor/waiting';
@@ -56,6 +62,9 @@ class Routes {
   static const tutorChat = '/tutor/chat';
   static const tutorBookings = '/tutor/bookings';
   static const tutorBookingDetail = '/tutor/booking-detail';
+  static const tutorClassHistory = '/tutor/class-history';
+  static const tutorEarnings = '/tutor/earnings';
+  static const tutorAccountSettings = '/tutor/account-settings';
   static const adminLogin = '/admin/login';
   static const adminDashboard = '/admin';
   static const verifyQueue = '/admin/verify-queue';
@@ -68,6 +77,7 @@ class Routes {
   static const adminBookings = '/admin/bookings';
 
   static Map<String, WidgetBuilder> map() => {
+    landing: (_) => const LandingScreen(),
     login: (_) => const LoginScreen(),
     signup: (_) => const SignupScreen(),
     roleGate: (_) => const RoleGate(),
@@ -87,6 +97,9 @@ class Routes {
     tutorChats: (_) => const TutorChatsScreen(),
     tutorChat: (_) => const TutorChatScreen(),
     tutorBookings: (_) => const TutorBookingsScreen(),
+    tutorClassHistory: (_) => const ClassHistoryScreen(),
+    tutorEarnings: (_) => const EarningsPayoutScreen(),
+    tutorAccountSettings: (_) => const TutorAccountSettingsScreen(),
     adminLogin: (_) => const AdminLoginScreen(),
     adminDashboard: (_) => const AdminDashboardScreen(),
     verifyQueue: (_) => const VerifyQueueScreen(),
@@ -124,9 +137,12 @@ class Routes {
           builder: (_) => AdminVerificationDetailScreen(tutorId: tutorId),
         );
       case tutorBookingDetail:
-        final bookingId = settings.arguments as String;
+        final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
-          builder: (_) => TutorBookingDetailScreen(bookingId: bookingId),
+          builder: (_) => TutorBookingDetailScreen(
+            bookingId: args['bookingId'] as String,
+            studentId: args['studentId'] as String,
+          ),
         );
       default:
         final builder = map()[settings.name];

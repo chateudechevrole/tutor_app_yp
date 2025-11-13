@@ -33,7 +33,7 @@ class DefaultFirebaseOptions {
     appId: '1:486478193659:ios:dbc2e3ec971a141507e15e',
     messagingSenderId: '486478193659',
     projectId: 'quicktutor2',
-    storageBucket: 'quicktutor2.firebasestorage.app',
+    storageBucket: 'quicktutor2.appspot.com',
     iosBundleId: 'com.example.quicktutor2',
   );
 
@@ -42,6 +42,6 @@ class DefaultFirebaseOptions {
     appId: '1:486478193659:android:6a0d8e096cda2aef07e15e',
     messagingSenderId: '486478193659',
     projectId: 'quicktutor2',
-    storageBucket: 'quicktutor2.firebasestorage.app',
+    storageBucket: 'quicktutor2.appspot.com',
   );
 }

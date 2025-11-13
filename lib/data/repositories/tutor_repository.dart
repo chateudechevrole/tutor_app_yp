@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/storage_paths.dart';
 import '../../services/firestore_paths.dart';
 import 'storage_repository.dart';
 
@@ -10,9 +11,29 @@ class TutorRepo {
 
   TutorRepo({FirebaseFirestore? db}) : _db = db ?? FirebaseFirestore.instance;
 
-  Future<void> setOnline(String uid, bool online) => _db
-      .doc(FP.tutorProfiles(uid))
-      .set({'isOnline': online}, SetOptions(merge: true));
+  Future<void> setOnline(String uid, bool online) async {
+    final batch = _db.batch();
+    final tutorDoc = _db.doc(FP.tutorProfiles(uid));
+    final userDoc = _db.doc(FP.users(uid));
+
+    batch.set(tutorDoc, {
+      // Canonical field
+      'online': online,
+      // Backward-compat: also update legacy field used by older code paths
+      'isOnline': online, // TODO: remove after all reads migrate to `online`
+      'status': online ? 'online' : 'offline',
+      'lastStatusChange': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    batch.set(userDoc, {
+      'acceptingBookings': online,
+      'online': online,
+      'isOnline': online,
+      'lastStatusChange': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> search({
     String subject = '',
@@ -21,7 +42,7 @@ class TutorRepo {
   }) {
     return _db
         .collection('tutorProfiles')
-        .where('isOnline', isEqualTo: true)
+        .where('online', isEqualTo: true)
         .snapshots();
   }
 
@@ -31,11 +52,19 @@ class TutorRepo {
     String? language,
     String? purpose,
   }) {
+    // TODO: Composite index required for: online + verified + isBusy + array filters
+    // See firestore.indexes.json for index configuration
     var q = _db
         .collection('tutorProfiles')
-        .where('isOnline', isEqualTo: true)
+        .where('online', isEqualTo: true)
         .where('verified', isEqualTo: true);
 
+    // Availability filter note:
+    // We previously filtered by `isBusy == false`, but not all profiles maintain this flag.
+    // To avoid hiding online tutors, we temporarily skip this filter.
+    // TODO: Re-enable when `tutorProfiles.available` (or reliable availability flag) is maintained.
+
+    // Only apply ONE array filter at a time (Firestore limitation)
     if (grade != null && grade.isNotEmpty) {
       q = q.where('grades', arrayContains: grade);
     } else if (subject != null && subject.isNotEmpty) {
@@ -50,7 +79,7 @@ class TutorRepo {
   }
 
   Future<String> uploadAvatar(String uid, File file) async {
-    final url = await _storage.putFile('tutor_avatars/$uid.jpg', file);
+    final url = await _storage.putFile(tutorAvatarPath(uid), file);
     await _db.doc(FP.users(uid)).set({
       'photoUrl': url,
     }, SetOptions(merge: true));
@@ -124,12 +153,12 @@ class TutorRepo {
       });
 
       final snapshot = await tx.get(tutorRef);
-  final data = snapshot.data() ?? {};
-  final currentSum = (data['sumRatings'] ?? 0).toDouble();
-  final currentCount = (data['totalReviews'] ?? 0) as num;
+      final data = snapshot.data() ?? {};
+      final currentSum = (data['sumRatings'] ?? 0).toDouble();
+      final currentCount = (data['totalReviews'] ?? 0) as num;
 
-  final newSum = currentSum + rating;
-  final newCount = currentCount.toInt() + 1;
+      final newSum = currentSum + rating;
+      final newCount = currentCount.toInt() + 1;
 
       tx.update(tutorRef, {
         'sumRatings': newSum,

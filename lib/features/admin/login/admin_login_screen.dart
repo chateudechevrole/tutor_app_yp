@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../debug/admin_debug.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -87,13 +85,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       : const Text('Sign In'),
                 ),
               ),
-              if (kDebugMode) ...[
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => debugPromoteToAdmin(context),
-                  child: const Text('Promote me to Admin (debug)'),
-                ),
-              ],
             ],
           ),
         ),
